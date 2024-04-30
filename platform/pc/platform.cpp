@@ -1,12 +1,12 @@
-#include <cstdio>
+#include <iostream>
 #include <cstdint>
 
 uint8_t tos_image[256*1024];
 uint32_t tosster_slot = 3;
 
-extern "C" void tos_puts( const char* str )
+extern "C" void _putchar( char c )
 {
-  printf( "%s", str );
+  std::cout << c;
 }
 
 extern "C"

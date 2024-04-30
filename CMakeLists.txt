@@ -30,6 +30,7 @@ include_directories( ${CMAKE_SOURCE_DIR}/platform )
 
 set( MAIN_FILES
   main.cpp
+  printf.c
 )
 
 if ( ${TARGET_PLATFORM} STREQUAL "PC" )
@@ -54,6 +55,7 @@ elseif ( ${TARGET_PLATFORM} STREQUAL "ST" )
   add_definitions( -DPLATFORM_ST -DBIG_ENDIAN )
 
   list( APPEND CMAKE_CXX_FLAGS "-save-temps -O3 -s" )
+  list( APPEND CMAKE_C_FLAGS "-save-temps -O3 -s" )
   list( APPEND CMAKE_VASM68K_FLAGS "-quiet -Felf -spaces -nosym" )
   list( APPEND CMAKE_EXE_LINKER_FLAGS "-b ataritos -gc-all -nostdlib -s -M" )
   set( CMAKE_EXECUTABLE_SUFFIX ".tos" )

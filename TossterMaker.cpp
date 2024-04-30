@@ -46,12 +46,13 @@ std::span<uint8_t> findImage( std::span<uint8_t> tpl )
 int main( int argc, char** argv )
 {
   kgflags_set_prefix( "-" );
+  kgflags_set_custom_description( "TOSSTErMaker Usage:" );
 
   int slot = 3;
   kgflags_int( "s", 0, "TOSSTEr slot value 0-3", true, &slot );
 
   const char* tos_path = nullptr;
-  kgflags_string( "t", "", "tos image path", true, &tos_path );
+  kgflags_string( "i", "", "tos image path", true, &tos_path );
 
   const char* out_path = nullptr;
   kgflags_string( "o", "", "output flasher path", true, &out_path );

@@ -1,4 +1,5 @@
 #include <cstdint>
+#include "printf.h"
 
 
 extern "C"
@@ -72,6 +73,7 @@ void tosster_erase( uint8_t pageCount )
 
 void tosster_flash_TOS( uint8_t const* data, uint16_t slot )
 {
+  printf( "Flashing TOS to slot %hd\r\n", slot );
   for ( uint16_t i = 0; i < 8; ++i )
   {
     uint32_t dst = 0x100000 + slot * 0x40000 + i * 32768;
@@ -79,7 +81,9 @@ void tosster_flash_TOS( uint8_t const* data, uint16_t slot )
     tosster_writeData( 128, data + i * 32768 );
     tosster_erase( 128 );
     tosster_flash( 128 );
+    printf( "Flashing ... %hd/8\r", i + 1 );
   }
+  printf( "\r\n" );
 }
 
 }
