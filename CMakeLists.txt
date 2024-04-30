@@ -25,7 +25,7 @@ endif()
 
 project ( toco ${TC_LANGS} )
 
-include_directories( ${CMAKE_SOURCE_DIR}/src )
+include_directories( ${CMAKE_SOURCE_DIR} )
 include_directories( ${CMAKE_SOURCE_DIR}/platform )
 
 set( MAIN_FILES
@@ -43,6 +43,11 @@ if ( ${TARGET_PLATFORM} STREQUAL "PC" )
     platform/pc/tosster.cpp
   )
 
+  add_executable( TossterMaker
+    TossterMaker.cpp
+    template.rc
+  )
+
 elseif ( ${TARGET_PLATFORM} STREQUAL "ST" )
 
   set( CMAKE_CXX_STANDARD 20 )
@@ -51,7 +56,7 @@ elseif ( ${TARGET_PLATFORM} STREQUAL "ST" )
   list( APPEND CMAKE_CXX_FLAGS "-save-temps -O3 -s" )
   list( APPEND CMAKE_VASM68K_FLAGS "-quiet -Felf -spaces -nosym" )
   list( APPEND CMAKE_EXE_LINKER_FLAGS "-b ataritos -gc-all -nostdlib -s -M" )
-  set( CMAKE_EXECUTABLE_SUFFIX ".prg" )
+  set( CMAKE_EXECUTABLE_SUFFIX ".tos" )
 
   set( STARTUP_FILE
     platform/st/startup.s
