@@ -8,8 +8,6 @@
 #include <filesystem>
 #include <fstream>
 #include <charconv>
-#define KGFLAGS_IMPLEMENTATION
-#include "kgflags.h"
 
 #ifndef TOS_TEMPLATE
 #define TOS_TEMPLATE 42
@@ -48,33 +46,29 @@ std::span<uint8_t> findImage( std::span<uint8_t> tpl )
   return std::span<uint8_t, 13 * 256 * 256>( tpl.data() + begin, 13 * 256 * 256 );
 }
 
-
 int main( int argc, char** argv )
 {
-  kgflags_set_prefix( "-" );
-  kgflags_set_custom_description( "First Core Flasher Maker Usage:" );
-
-  const char* core_path = nullptr;
-  kgflags_string( "i", "", "tosster core hex file", true, &core_path );
-
-  const char* out_path = nullptr;
-  kgflags_string( "o", "", "output flasher path", true, &out_path );
-
-
-  if ( !kgflags_parse( argc, argv ) )
+  if ( argc != 3 )
   {
-    std::cout << "First Core Flasher Maker\n";
-    kgflags_print_errors();
-    kgflags_print_usage();
+    std::cout << "TOSSTEr Core Flasher Maker v1.0 by laoo/ng 2024\n";
+    std::cout << "Usage:\nTossCorer core_hex_file output_flasher_file\n\nUse descriptive core hex file name as at most 32 characters from file name will be used as core version string.\n(spaces are allowed)\n";
     return 1;
   }
+
+  std::filesystem::path corePath{ argv[1] };
+  if ( !std::filesystem::exists( corePath ) )
+  {
+    std::cout << "Core file not found\n";
+    return 1;
+  }
+
+  std::filesystem::path flasherPath{ argv[2] };
 
   std::vector<uint8_t> templateData = getTemplate();
   auto imageSpan = findImage( templateData );
 
   std::ranges::fill( imageSpan, 0xff );
 
-  std::filesystem::path corePath{ core_path };
 
   std::ifstream coreFile{ corePath };
 
@@ -112,8 +106,6 @@ int main( int argc, char** argv )
 
   std::fill_n( imageSpan.begin(), 256, 0 );
   std::copy_n( versionString.begin(), (std::min)( versionString.size(), 32ull ), imageSpan.begin() );
-
-  std::filesystem::path flasherPath{ out_path };
 
   std::ofstream outFile{ flasherPath, std::ios::binary };
   if ( outFile.good() )

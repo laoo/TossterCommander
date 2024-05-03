@@ -45,12 +45,12 @@ if ( ${TARGET_PLATFORM} STREQUAL "PC" )
     platform/pc/tosster.cpp
   )
 
-  add_executable( TosFlashMaker
+  add_executable( TossToser
     TosFlashMaker.cpp
-    #Tostemplate.rc
+    Tostemplate.rc
   )
 
-  add_executable( CoreFlashMaker
+  add_executable( TossCorer
     CoreFlashMaker.cpp
     Coretemplate.rc
   )
@@ -76,25 +76,27 @@ elseif ( ${TARGET_PLATFORM} STREQUAL "ST" )
 
 endif()
 
-#add_executable( TosFlasher
-#  ${STARTUP_FILE}
-#  TosFlasher.cpp
-#  ${COMMON_FILES}
-#  ${PLATFORM_FILES}
-#)
+add_executable( TosFlasher
+  ${STARTUP_FILE}
+  TosFlasher.cpp
+  ${COMMON_FILES}
+  ${PLATFORM_FILES}
+  platform/st/tos_image.s
+)
 
 add_executable( CoreFlasher
   ${STARTUP_FILE}
   CoreFlasher.cpp
   ${COMMON_FILES}
   ${PLATFORM_FILES}
+  platform/st/core_image.s
 )
 
 if ( ${TARGET_PLATFORM} STREQUAL "ST" )
 
-#add_custom_command( TARGET TosFlasher POST_BUILD
-#  COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:TosFlasher> d:\\home\\hatari\\out\\HD
-#)
+add_custom_command( TARGET TosFlasher POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:TosFlasher> d:\\home\\hatari\\out\\HD
+)
 
 add_custom_command( TARGET CoreFlasher POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:CoreFlasher> d:\\home\\hatari\\out\\HD

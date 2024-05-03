@@ -49,7 +49,7 @@ tosster_put::
         rts
 
 tosster_get::
-        move.b  $e00000,d0
+        move.w  $e00000,d0
         rts
 
 __umodsi3::
@@ -119,21 +119,3 @@ __mulsi3::
         mulu.w  10(sp),d1
         add.l   d1,d0
         rts
-
-
-        data
-
-        align   8
-
-core_image::
-        rept    106496
-        dc.q    $434f52494d414745
-        endr
-
-
-;tos_image::
-;        rept    32768
-;        dc.q    $544f53494d414745
-;        endr
-;tosster_slot::
-;        dc.l    $3

@@ -2,9 +2,10 @@
 #include <string_view>
 #include <span>
 #include "printf.h"
+#include "platform.h"
 
 uint32_t pageBuffer[128*256/4];
-
+char slotDescs[256];
 
 extern "C"
 {
@@ -102,17 +103,43 @@ extern "C"
     }
   }
 
-  void tosster_flash_TOS( uint8_t const* data, uint16_t slot )
+  bool tosster_flash_TOS( uint8_t const* data, uint16_t slot )
   {
-    printf( "Flashing TOS to slot %hd\r\n", slot );
-    for ( uint16_t i = 0; i < 8; ++i )
+    printf( "Erasing ... 0/8" );
+    for ( uint32_t i = 0; i < 8; ++i )
+    {
+      uint32_t dst = 0x100000 + slot * 0x40000 + i * 32768;
+      tosster_setWriteAddress( dst );
+      tosster_erase( 128 );
+      printf( "\rErasing ... %d/8", i + 1 );
+    }
+    printf( "\r\nFlashing ... 0/8" );
+    for ( uint32_t i = 0; i < 8; ++i )
     {
       uint32_t dst = 0x100000 + slot * 0x40000 + i * 32768;
       tosster_setWriteAddress( dst );
       tosster_flashData( 128, data + i * 32768 );
-      printf( "Flashing ... %hd/8\r", i + 1 );
+      printf( "\rFlashing ... %d/8", i + 1 );
     }
-    printf( "\r\n" );
+    printf( "\r\nVerifying ... 0/8" );
+    uint32_t const* data32 = ( uint32_t const* )data;
+    for ( uint32_t i = 0; i < 8; ++i )
+    {
+      uint32_t dst = 0x100000 + slot * 0x40000 + i * 32768;
+      tosster_setReadAddress( dst );
+      tosster_readData( 128, ( uint8_t* )pageBuffer );
+      for ( uint32_t j = 0; j < 128 * 256 / 4; ++j )
+      {
+        if ( pageBuffer[j] != data32[i * 128 * 256 / 4 + j] )
+        {
+          printf( "\rVerification failed at %d/%d", i, j );
+          return false;
+        }
+      }
+      printf( "\rVerifying ... %d/8", i + 1 );
+    }
+    printf( "\r\nErasing, flashing and verifying done!\r\n" );
+    return true;
   }
 
   void tosster_flash_core( uint8_t const* data )
@@ -154,17 +181,114 @@ extern "C"
   }
 }
 
-std::span<uint8_t> tosster_readPage( uint32_t addr )
-{
-  tosster_setReadAddress( addr & ~255u );
-  tosster_readData( 4, ( uint8_t* )pageBuffer );
-  return std::span{ (uint8_t*)&pageBuffer[addr & 255u], 32 };
-}
-
-
 std::string_view tosster_readCoreVersion()
 {
   tosster_setReadAddress( 0 );
   tosster_readData( 1, ( uint8_t* )pageBuffer );
   return std::string_view{ ( char const* )pageBuffer, 32 };
+}
+
+#ifndef _MSC_VER
+
+extern "C" void* memset( void* s, int c, size_t count )
+{
+  for ( uint16_t i = 0; i < count; ++i )
+  {
+    ( ( char* )s )[i] = c;
+  }
+  return 0;
+}
+
+#endif
+
+
+void tosster_udateDescSlot( uint32_t descOff, uint16_t slot, char * tos_version )
+{
+  printf( "Updating TOS description\r\n" );
+
+  for ( uint16_t i = 0; i < 32; ++i )
+  {
+    slotDescs[slot * 32 + i] = tos_version[i];
+  }
+
+  if ( descOff < 512 * 256 )
+  {
+    uint32_t dst = 0x0D0000 + descOff;
+    tosster_setWriteAddress( dst );
+    memset( pageBuffer, 0, 256 );
+    tosster_flashData( 1, ( uint8_t const* )pageBuffer );
+
+    descOff += 256;
+  }
+
+  if ( descOff >= 512 * 256 )
+  {
+    printf( "Whole description area is full,\r\n" );
+    printf( "erasing ... 0/4" );
+    for ( uint32_t i = 0; i < 4; ++i )
+    {
+      uint32_t dst = 0x0D0000 + i * 32768;
+      tosster_setWriteAddress( dst );
+      tosster_erase( 128 );
+      printf( "\rerasing ... %d/4", i + 1 );
+    }
+    printf( ", done.\r\n" );
+
+    descOff = 0;
+  }
+
+  uint32_t dst = 0x0D0000 + descOff;
+  tosster_setWriteAddress( dst );
+  tosster_flashData( 1, (uint8_t const*)slotDescs );
+  printf( "Done\r\n" );
+}
+
+static bool firstNotEmptySlot()
+{
+  uint32_t const* slot32 = ( uint32_t const* )slotDescs;
+  for ( uint16_t i = 0; i < 256/4; ++i )
+  {
+    if ( slot32[i] != 0 )
+    {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+
+static uint32_t findFirstDescSlot()
+{
+  for ( uint16_t i = 0; i < 512; ++i )
+  {
+    uint32_t off = i * 256;
+    tosster_setReadAddress( 0x0D0000 + off );
+    tosster_readData( 1, ( uint8_t* )slotDescs );
+    if ( firstNotEmptySlot() )
+      return off;
+  }
+
+  memset( slotDescs, -1, 256 );
+  return 512 * 256;
+}
+
+
+uint32_t tosster_printSlots()
+{
+  uint32_t descOff = findFirstDescSlot();
+
+  //slotDescs has actual slot description content
+  for ( uint32_t i = 0; i < 4; ++i )
+  {
+    if ( slotDescs[i * 32] == -1 )
+    {
+      printf( "%d: (Empty)\r\n", i + 1 );
+    }
+    else
+    {
+      printf( "%d: %.*s\r\n", i + 1, 32, slotDescs + i * 32 );
+    }
+  }
+  return descOff;
 }

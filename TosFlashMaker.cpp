@@ -6,8 +6,6 @@
 #include <iostream>
 #include <filesystem>
 #include <fstream>
-#define KGFLAGS_IMPLEMENTATION
-#include "kgflags.h"
 
 #ifndef TOS_TEMPLATE
 #define TOS_TEMPLATE 42
@@ -48,39 +46,19 @@ std::span<uint8_t> findImage( std::span<uint8_t> tpl )
 
 int main( int argc, char** argv )
 {
-  kgflags_set_prefix( "-" );
-  kgflags_set_custom_description( "TOSSTErMaker Usage:" );
-
-  int slot = 3;
-  kgflags_int( "s", 0, "TOSSTEr slot value 0-3", true, &slot );
-
-  const char* tos_path = nullptr;
-  kgflags_string( "i", "", "tos image path", true, &tos_path );
-
-  const char* out_path = nullptr;
-  kgflags_string( "o", "", "output flasher path", true, &out_path );
-
-
-  if ( !kgflags_parse( argc, argv ) )
+  if ( argc != 3 )
   {
-    std::cout << "TOSSTErMaker\n";
-    kgflags_print_errors();
-    kgflags_print_usage();
+    std::cout << "TOSSTEr TOS Flasher Maker v1.0 by laoo/ng 2024\n";
+    std::cout << "Usage:\nTossToser TOS_image_file output_flasher_file\n\nUse descriptive TOS file name as at most 32 characters from file name will be used as tos version string.\n(spaces are allowed)\n";
     return 1;
   }
 
-  if ( slot < 0 || slot > 3 )
-  {
-    std::cout << "Slot must be 0-3\n";
-    return 1;
-  }
+  std::filesystem::path tosPath{ argv[1] };
+  std::filesystem::path flasherPath{ argv[2] };
 
   std::vector<uint8_t> templateData = getTemplate();
   auto imageSpan = findImage( templateData );
-  uint8_t& slotRef = *( uint8_t* )( imageSpan.data() + imageSpan.size() + 3 );
-
-  slotRef = slot;
-  std::filesystem::path tosPath{ tos_path };
+  std::span<char,32> versionSpan = std::span<char,32>( (char*)imageSpan.data() + imageSpan.size(), 32 );
 
   size_t tosSize = std::filesystem::file_size( tosPath );
   if ( tosSize == 0 )
@@ -96,12 +74,15 @@ int main( int argc, char** argv )
   }
 
   {
-    std::ifstream tosFile{ tos_path, std::ios::binary };
+    std::ifstream tosFile{ tosPath, std::ios::binary };
     tosFile.read( ( char* )imageSpan.data(), imageSpan.size() );
   }
 
+  tosPath.replace_extension();
+  auto versionString = tosPath.filename().string();
 
-  std::filesystem::path flasherPath{ out_path };
+  std::ranges::fill( versionSpan, 0 );
+  std::copy_n( versionString.begin(), ( std::min )( versionString.size(), 32ull ), versionSpan.begin() );
 
   std::ofstream outFile{ flasherPath, std::ios::binary };
   if ( outFile.good() )

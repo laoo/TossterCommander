@@ -2,7 +2,7 @@
 #include <cstdint>
 
 uint8_t tos_image[256*1024];
-uint32_t tosster_slot = 3;
+char tos_version[32];
 
 uint8_t core_image[13 * 256 * 256];
 
