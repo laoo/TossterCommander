@@ -9,7 +9,16 @@ _putchar::
         addq.l  #4,sp
         rts
 
+_getch::
+        move.w  #8,-(sp)
+        trap    #1
+        addq.l  #2,sp
+        rts
+
 platform_init::
+        rts
+
+tosster_init::
         rts
 
 tosster_open::
@@ -40,7 +49,7 @@ tosster_put::
         rts
 
 tosster_get::
-        move.w  $e00000,d0
+        move.b  $e00000,d0
         rts
 
 __umodsi3::
@@ -115,9 +124,16 @@ __mulsi3::
         data
 
         align   8
-tos_image::
-        rept    32768
-        dc.q    $544f53494d414745
+
+core_image::
+        rept    106496
+        dc.q    $434f52494d414745
         endr
-tosster_slot::
-        dc.l    $3
+
+
+;tos_image::
+;        rept    32768
+;        dc.q    $544f53494d414745
+;        endr
+;tosster_slot::
+;        dc.l    $3

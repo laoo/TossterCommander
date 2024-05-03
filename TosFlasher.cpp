@@ -3,7 +3,7 @@
 
 int main()
 {
-  platform_init();
+  tosster_init();
   if ( tosster_open() )
   {
     printf("Tosster found\r\n");

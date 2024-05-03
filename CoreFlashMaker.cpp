@@ -1,5 +1,5 @@
 #include <Windows.h>
-#include "template.rc"
+#include <algorithm>
 #include <string>
 #include <cstdint>
 #include <vector>
@@ -7,9 +7,15 @@
 #include <iostream>
 #include <filesystem>
 #include <fstream>
+#include <charconv>
 #define KGFLAGS_IMPLEMENTATION
 #include "kgflags.h"
 
+#ifndef TOS_TEMPLATE
+#define TOS_TEMPLATE 42
+#endif
+
+          
 using namespace std::string_view_literals;
 
 std::vector<uint8_t> getTemplate()
@@ -30,29 +36,26 @@ std::vector<uint8_t> getTemplate()
 
 std::span<uint8_t> findImage( std::span<uint8_t> tpl )
 {
-  auto pattern = "TOSIMAGE"sv;
+  auto pattern = "CORIMAGE"sv;
   std::string_view view{ ( char const* )tpl.data(), tpl.size() };
   size_t begin = view.find( pattern );
   size_t end = view.rfind( pattern ) + pattern.size();
   if ( begin == std::string_view::npos || end == std::string_view::npos )
     return {};
-  if ( end - begin != 256 * 1024 )
+  if ( end - begin != 13 * 256 * 256 )
     return {};
 
-  return std::span<uint8_t, 256 * 1024>( tpl.data() + begin, 256 * 1024 );
+  return std::span<uint8_t, 13 * 256 * 256>( tpl.data() + begin, 13 * 256 * 256 );
 }
 
 
 int main( int argc, char** argv )
 {
   kgflags_set_prefix( "-" );
-  kgflags_set_custom_description( "TOSSTErMaker Usage:" );
+  kgflags_set_custom_description( "First Core Flasher Maker Usage:" );
 
-  int slot = 3;
-  kgflags_int( "s", 0, "TOSSTEr slot value 0-3", true, &slot );
-
-  const char* tos_path = nullptr;
-  kgflags_string( "i", "", "tos image path", true, &tos_path );
+  const char* core_path = nullptr;
+  kgflags_string( "i", "", "tosster core hex file", true, &core_path );
 
   const char* out_path = nullptr;
   kgflags_string( "o", "", "output flasher path", true, &out_path );
@@ -60,43 +63,55 @@ int main( int argc, char** argv )
 
   if ( !kgflags_parse( argc, argv ) )
   {
-    std::cout << "TOSSTErMaker\n";
+    std::cout << "First Core Flasher Maker\n";
     kgflags_print_errors();
     kgflags_print_usage();
     return 1;
   }
 
-  if ( slot < 0 || slot > 3 )
-  {
-    std::cout << "Slot must be 0-3\n";
-    return 1;
-  }
-
   std::vector<uint8_t> templateData = getTemplate();
   auto imageSpan = findImage( templateData );
-  uint8_t& slotRef = *( uint8_t* )( imageSpan.data() + imageSpan.size() + 3 );
 
-  slotRef = slot;
-  std::filesystem::path tosPath{ tos_path };
+  std::ranges::fill( imageSpan, 0xff );
 
-  size_t tosSize = std::filesystem::file_size( tosPath );
-  if ( tosSize == 0 )
+  std::filesystem::path corePath{ core_path };
+
+  std::ifstream coreFile{ corePath };
+
+  int offset = 0;
+  uint8_t value;
+  while ( !coreFile.bad() )
   {
-    std::cout << "Tos file not found\n";
+    std::string line;
+    std::getline( coreFile, line );
+    if ( line.empty() )
+      break;
+    auto res = std::from_chars( line.data(), line.data() + line.size(), value, 16 );
+    if ( res.ec == std::errc::invalid_argument )
+    {
+      std::cout << "Core file must be a HEX file with one value in each line\n";
+      return 1;
+    }
+    
+    imageSpan[offset++] = value;
+    if ( offset >= imageSpan.size() )
+    {
+      std::cout << "Core file too big\n";
+      return 1;
+    }
+  }
+
+  if ( offset == 0 )
+  {
+    std::cout << "Error reading core file\n";
     return 1;
   }
 
-  if ( tosSize != imageSpan.size() )
-  {
-    std::cout << "Tos size must be " << imageSpan.size() << " bytes\n";
-    return 1;
-  }
+  corePath.replace_extension();
+  auto versionString = corePath.filename().string();
 
-  {
-    std::ifstream tosFile{ tos_path, std::ios::binary };
-    tosFile.read( ( char* )imageSpan.data(), imageSpan.size() );
-  }
-
+  std::fill_n( imageSpan.begin(), 256, 0 );
+  std::copy_n( versionString.begin(), (std::min)( versionString.size(), 32ull ), imageSpan.begin() );
 
   std::filesystem::path flasherPath{ out_path };
 

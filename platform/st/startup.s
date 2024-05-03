@@ -27,10 +27,13 @@ _start::
         trap    #1
         add.l   #12,sp
 
+        move.l  (sp),a0
+        add.l   #128,a0
         moveq   #0,d0
-        move.l  d0,-(sp)         ;empty env
-        move.l  d0,-(sp)         ;empty argv
-        move.w  #1,-(sp)         ;argc = 0
+        move.b  (a0),d0
+        lea.l   1(a0),a0
+        move.l  a0,-(sp)         ;empty argv
+        move.l  d0,-(sp)         ;argc = 0
 
         jsr     main
 

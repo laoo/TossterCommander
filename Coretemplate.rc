@@ -1,0 +1,5 @@
+#define TOS_TEMPLATE 42
+
+#ifdef RC_INVOKED
+TOS_TEMPLATE RCDATA "CoreFlasher.tos"
+#endif

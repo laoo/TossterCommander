@@ -3,6 +3,8 @@
 #include <vector>
 #include <optional>
 #include <array>
+#include <span>
+#include <Windows.h>
 
 namespace tosster
 {
@@ -35,7 +37,7 @@ static constexpr uint8_t CMD_FLASH_READ = 0x24;
 static constexpr uint8_t CMD_FLASH_ERASE = 0x5e;
 static constexpr uint8_t CMD_SELECT_SLOT = 0x13;
 
-static std::vector<uint8_t> gData;
+static std::span<uint8_t> gData;
 static std::vector<uint8_t> gBuffer;
 
 static uint32_t gReadAddr = 0;
@@ -46,21 +48,55 @@ static uint32_t gCurrentSlot = 0;
 
 static State gState = IDLE;
 
+static uint8_t* mAllocBase = nullptr;
+static HANDLE hFile = NULL;
+static HANDLE hMapFile = NULL;
+
+
 static void init()
 {
-  gData.resize( 0x200000, 0xff );
   gBuffer.resize( 32768, 0xff );
+
+  hFile = CreateFile( "../../../TOSSTer.dat",
+    GENERIC_READ | GENERIC_WRITE,
+    0,
+    NULL,
+    OPEN_EXISTING,
+    FILE_ATTRIBUTE_NORMAL,
+    NULL );
+
+  if ( hFile == INVALID_HANDLE_VALUE )
+    return;
+
+  hMapFile = CreateFileMapping( hFile,          // current file handle
+    NULL,           // default security
+    PAGE_READWRITE, // read/write permission
+    0,              // size of mapping object, high
+    2 * 1024 * 1024,     // size of mapping object, low
+    NULL );         // name of mapping object
+
+  if ( hMapFile == NULL )
+    return;
+
+  mAllocBase = ( uint8_t* )MapViewOfFileEx( hMapFile, FILE_MAP_ALL_ACCESS, 0, 0, 2 * 1024 * 1024, ( void* )0xE00000 );
+
+  if ( mAllocBase == NULL )
+  {
+    return;
+  }
+
+  gData = std::span<uint8_t>( mAllocBase, 2 * 1024 * 1024 );
 }
 
 static void readFlash()
 {
-  uint8_t const* src = gData.data() + ( gWriteAddr & 0x1fffff );
+  uint8_t const* src = gData.data() + ( gReadAddr & 0x1fffff );
   memcpy( gBuffer.data(), src, gBuffer.size() );
 }
 
 static void flash()
 {
-  uint8_t * dst = gData.data() + ( gReadAddr & 0x1fffff );
+  uint8_t * dst = gData.data() + ( gWriteAddr & 0x1fffff );
   memcpy( dst, gBuffer.data(), gBufferLimit );
 }
 
@@ -258,12 +294,20 @@ static std::optional<uint16_t> filter( uint8_t* rom, uint32_t addr )
 
 }
 
+extern uint8_t core_image[13 * 256 * 256];
 
 extern "C"
 {
 
+
 void tosster_init()
 {
+  static const char dat[9] = "CORIMAGE";
+
+  for ( size_t i = 0; i < 32768; ++i )
+  {
+    memcpy( core_image + i * 8, dat, 8 );
+  }
   tosster::init();
 }
 

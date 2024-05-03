@@ -1,6 +1,8 @@
 ﻿cmake_minimum_required (VERSION 3.25)
 
 set( TARGET_PLATFORM "ST" CACHE STRING "Platform to build for" )
+option( BUILD_TOCO "Build toco" OFF )
+option( BUILD_CORE_FLASHER "Build core flasher" ON )
 
 # Building jaguar: cmake -G "MinGW Makefiles" CMAKE_SOURCE_DIR
 
@@ -28,9 +30,9 @@ project ( toco ${TC_LANGS} )
 include_directories( ${CMAKE_SOURCE_DIR} )
 include_directories( ${CMAKE_SOURCE_DIR}/platform )
 
-set( MAIN_FILES
-  main.cpp
+set( COMMON_FILES
   printf.c
+  platform/common.cpp
 )
 
 if ( ${TARGET_PLATFORM} STREQUAL "PC" )
@@ -39,14 +41,18 @@ if ( ${TARGET_PLATFORM} STREQUAL "PC" )
   add_definitions( -DPLATFORM_PC )
 
   list( APPEND PLATFORM_FILES
-    platform/common.cpp
     platform/pc/platform.cpp
     platform/pc/tosster.cpp
   )
 
-  add_executable( TossterMaker
-    TossterMaker.cpp
-    template.rc
+  add_executable( TosFlashMaker
+    TosFlashMaker.cpp
+    #Tostemplate.rc
+  )
+
+  add_executable( CoreFlashMaker
+    CoreFlashMaker.cpp
+    Coretemplate.rc
   )
 
 elseif ( ${TARGET_PLATFORM} STREQUAL "ST" )
@@ -57,7 +63,7 @@ elseif ( ${TARGET_PLATFORM} STREQUAL "ST" )
   list( APPEND CMAKE_CXX_FLAGS "-save-temps -O3 -s" )
   list( APPEND CMAKE_C_FLAGS "-save-temps -O3 -s" )
   list( APPEND CMAKE_VASM68K_FLAGS "-quiet -Felf -spaces -nosym" )
-  list( APPEND CMAKE_EXE_LINKER_FLAGS "-b ataritos -gc-all -nostdlib -s -M" )
+  list( APPEND CMAKE_EXE_LINKER_FLAGS "-b ataritos -gc-all -nostdlib -s" )
   set( CMAKE_EXECUTABLE_SUFFIX ".tos" )
 
   set( STARTUP_FILE
@@ -66,14 +72,36 @@ elseif ( ${TARGET_PLATFORM} STREQUAL "ST" )
 
   list( APPEND PLATFORM_FILES
     platform/st/platform.s
-    platform/common.cpp
   )
 
 endif()
 
-add_executable( toco
+#add_executable( TosFlasher
+#  ${STARTUP_FILE}
+#  TosFlasher.cpp
+#  ${COMMON_FILES}
+#  ${PLATFORM_FILES}
+#)
+
+add_executable( CoreFlasher
   ${STARTUP_FILE}
-  ${MAIN_FILES}
+  CoreFlasher.cpp
+  ${COMMON_FILES}
   ${PLATFORM_FILES}
 )
 
+if ( ${TARGET_PLATFORM} STREQUAL "ST" )
+
+#add_custom_command( TARGET TosFlasher POST_BUILD
+#  COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:TosFlasher> d:\\home\\hatari\\out\\HD
+#)
+
+add_custom_command( TARGET CoreFlasher POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:CoreFlasher> d:\\home\\hatari\\out\\HD
+)
+
+#add_custom_command( TARGET CoreFlasher POST_BUILD
+#  COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:CoreFlasher> H:\\
+#)
+
+endif()

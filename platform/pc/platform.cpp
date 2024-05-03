@@ -4,10 +4,13 @@
 uint8_t tos_image[256*1024];
 uint32_t tosster_slot = 3;
 
+uint8_t core_image[13 * 256 * 256];
+
 extern "C" void _putchar( char c )
 {
   std::cout << c;
 }
+
 
 extern "C"
 {
@@ -31,11 +34,6 @@ extern "C" uint16_t tosster_get()
   {
     return 0;
   }
-}
-
-extern "C" void platform_init()
-{
-  tosster_init();
 }
 
 extern "C" bool tosster_open()

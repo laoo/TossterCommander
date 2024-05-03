@@ -1,5 +1,5 @@
 #define TOS_TEMPLATE 42
 
 #ifdef RC_INVOKED
-TOS_TEMPLATE RCDATA "toco.tos"
+TOS_TEMPLATE RCDATA "TosFlasher.tos"
 #endif
