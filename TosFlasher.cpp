@@ -3,7 +3,7 @@
 
 int main()
 {
-  printf( "TOSSTEr TOS flasher\r\nversion 1.0 by laoo/ng 2024\r\nFlashed TOS:\r\n%.*s\r\n", 32, tos_version );
+  printf( "TOSSTEr TOS flasher\r\nversion 1.1 by laoo/ng 2024\r\nFlashed TOS:\r\n%.*s\r\n", 32, tos_version );
   tosster_init();
   if ( tosster_open() )
   {

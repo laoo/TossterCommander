@@ -50,7 +50,7 @@ int main( int argc, char** argv )
 {
   if ( argc != 3 )
   {
-    std::cout << "TOSSTEr Core Flasher Maker v1.0 by laoo/ng 2024\n";
+    std::cout << "TOSSTEr Core Flasher Maker v1.1 by laoo/ng 2024\n";
     std::cout << "Usage:\nTossCorer core_hex_file output_flasher_file\n\nUse descriptive core hex file name as at most 32 characters from file name will be used as core version string.\n(spaces are allowed)\n";
     return 1;
   }

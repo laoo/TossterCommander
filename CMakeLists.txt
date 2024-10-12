@@ -1,10 +1,8 @@
 ﻿cmake_minimum_required (VERSION 3.25)
 
 set( TARGET_PLATFORM "ST" CACHE STRING "Platform to build for" )
-option( BUILD_TOCO "Build toco" OFF )
-option( BUILD_CORE_FLASHER "Build core flasher" ON )
 
-# Building jaguar: cmake -G "MinGW Makefiles" CMAKE_SOURCE_DIR
+# Building ST: cmake -G "MinGW Makefiles" CMAKE_SOURCE_DIR
 
 if ( ${TARGET_PLATFORM} STREQUAL "ST" )
 

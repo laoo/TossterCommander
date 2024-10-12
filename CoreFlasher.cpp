@@ -9,7 +9,7 @@ void printCoreVersion()
 
 int main()
 {
-  printf( "TOSSTEr core flasher\r\nversion 1.0 by laoo/ng 2024\r\nFlashed core version:\r\n%.*s\r\n", 32, ( char const* )core_image );
+  printf( "TOSSTEr core flasher\r\nversion 1.1 by laoo/ng 2024\r\nFlashed core version:\r\n%.*s\r\n", 32, ( char const* )core_image );
   tosster_init();
   if ( tosster_open() )
   {
