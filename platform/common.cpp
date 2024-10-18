@@ -107,16 +107,16 @@ extern "C"
     {
       if ( pageBuffer[j] != data32[j] )
       {
-        _putchar( errChar );
+        printf( "\r\n%c read %04x exp %04x @ %04x", errChar, pageBuffer[j], data32[j], j * 4 );
         return false;
       }
     }
     return true;
   }
 
-  static bool tosster_doFlash( uint32_t dst, uint32_t const* data32 )
+  static int tosster_doFlash( uint32_t dst, uint32_t const* data32 )
   {
-    static constexpr uint16_t RETRY_COUNT = 20;
+    static constexpr uint16_t RETRY_COUNT = 8;
 
     uint16_t retry;
     for ( retry = 0; retry < RETRY_COUNT; ++retry )
@@ -125,29 +125,32 @@ extern "C"
       if ( tosster_verifyBlock( '^', data32 ) )
         break;
     }
-    if ( retry < RETRY_COUNT )
-    {
-      for ( retry = 0; retry < RETRY_COUNT; ++retry )
-      {
-        tosster_setWriteAddress( dst );
-        tosster_erase( PAGE_COUNT );
-        tosster_setWriteAddress( dst );
-        tosster_flash( PAGE_COUNT );
-        tosster_setReadAddress( dst );
-        tosster_read();
 
-        if ( tosster_verifyBlock( '!', data32 ) )
-          break;
-      }
-      if ( retry < RETRY_COUNT )
-      {
-        printf( "OK\r\n" );
-        return true;
-      }
+    if ( retry >= RETRY_COUNT )
+    {
+      printf( "\r\nTransmission to ToSSTer failed!\r\n" );
+      return 1;
     }
 
-    printf( "Verification failed!\r\n" );
-    return false;
+    for ( retry = 0; retry < RETRY_COUNT; ++retry )
+    {
+      tosster_setWriteAddress( dst );
+      tosster_erase( PAGE_COUNT );
+      tosster_setWriteAddress( dst );
+      tosster_flash( PAGE_COUNT );
+      tosster_setReadAddress( dst );
+      tosster_read();
+
+      if ( tosster_verifyBlock( '!', data32 ) )
+        break;
+    }
+    if ( retry >= RETRY_COUNT )
+    {
+      printf( "\r\nFlash verification failed!\r\n" );
+      return 2;
+    }
+
+    return 0;
   }
 
   bool tosster_flash_TOS( uint8_t const* data, uint16_t slot )
@@ -157,12 +160,47 @@ extern "C"
       uint32_t dst = 0x100000 + slot * 0x40000 + i * 32768;
       uint32_t const* data32 = ( uint32_t const* )( data + i * 32768 );
       printf( "Flashing ... %d/8 ", i + 1 );
-      if ( !tosster_doFlash( dst, data32 ) )
+      if ( tosster_doFlash( dst, data32 ) > 0 )
       {
         return false;
       }
     }
     return true;
+  }
+
+  void tosster_verify_TOS( uint8_t const* data, uint16_t slot )
+  {
+    for ( uint32_t i = 0; i < 8; ++i )
+    {
+      uint32_t i5 = i * 32768;
+      uint32_t dst = 0x100000 + slot * 0x40000 + i5;
+      printf( "Verifying ... %d/8", i + 1 );
+
+      tosster_setReadAddress( dst );
+      tosster_read();
+      uint8_t* buf = ( uint8_t* )pageBuffer;
+      tosster_readData( PAGE_COUNT, buf );
+      for ( uint16_t j = 0; j < PAGE_COUNT * 256; ++j )
+      {
+        if ( buf[j] != data[j] )
+        {
+          j &= 0xfff0;
+          printf( "\r\nOffset: $%04x\r\nExpected:\r\n$", i5 + j );
+          for ( uint16_t k = 0; k < 16; ++k )
+          {
+            printf( "%02x", data[j + k] );
+          }
+          printf( "\r\nFound:\r\n$", i5 + j );
+          for ( uint16_t k = 0; k < 16; ++k )
+          {
+            printf( "%02x", buf[j + k] );
+          }
+          printf( "\r\n" );
+          return;
+        }
+      }
+    }
+    printf( "OK\r\n" );
   }
 
   void tosster_flash_core( uint8_t const* data )
@@ -172,9 +210,13 @@ extern "C"
       uint32_t dst = i * 32768;
       uint32_t const* data32 = ( uint32_t const* )( data + dst );
       printf( "Flashing ... %d/26 ", i + 1 );
-      if ( !tosster_doFlash( dst, data32 ) )
+      int result = tosster_doFlash( dst, data32 );
+      if ( result )
       {
-        printf( "TOSSTEr won't run now after reboot\r\nTry to address the problem\r\nand repeat flashing befor rebooting\r\n" );
+        if ( result > 1 )
+          printf( "TOSSTEr won't run now after reboot\r\nTry to address the problem\r\nand repeat flashing befor rebooting\r\n" );
+        else
+          printf( "TOSSTEr could not download the core\r\n" );
         return;
       }
     }
@@ -282,22 +324,79 @@ static uint32_t findFirstDescSlot()
   return 512 * 256;
 }
 
+std::pair<uint16_t, uint8_t> tosster_actualSlot( uint16_t offset )
+{
+  uint8_t* buf = ( uint8_t* )pageBuffer;
+  tosster_setReadAddress( 0x0f0000 + offset );
+  tosster_read();
+  tosster_readData( PAGE_COUNT, buf );
+  uint8_t result = 0;
+  uint16_t i;
+  for ( i = 0; i < PAGE_COUNT * 256; ++i )
+  {
+    uint8_t v = buf[i];
+    if ( v == 0xff )
+    {
+      return { i + offset, result };
+    }
 
-uint32_t tosster_printSlots()
+    result = v;
+  }
+
+  //no slot has been found
+  if ( offset == 0 )
+    return tosster_actualSlot( i ); //checking second 32k
+  else
+    return { 0xffff, result };  //fallback to the last slot
+}
+
+
+uint32_t tosster_printSlots( uint8_t actualSlot )
 {
   uint32_t descOff = findFirstDescSlot();
 
   //slotDescs has actual slot description content
   for ( uint32_t i = 0; i < 4; ++i )
   {
+    char left = actualSlot == i ? '[' : ' ';
+    char right = actualSlot == i ? ']' : ' ';
+
     if ( slotDescs[i * 32] == -1 )
     {
-      printf( "%d: (Empty)\r\n", i + 1 );
+      printf( "%c%d%c: (Empty)\r\n", left, i + 1, right );
     }
     else
     {
-      printf( "%d: %.*s\r\n", i + 1, 32, slotDescs + i * 32 );
+      printf( "%c%d%c: %.*s\r\n", left, i + 1, right, 32, slotDescs + i * 32 );
     }
   }
   return descOff;
+}
+
+void tosster_printSlot( uint16_t slotNr )
+{
+  uint16_t descOff = findFirstDescSlot();
+
+  //slotDescs has actual slot description content
+  for ( uint16_t i = 0; i < 4; ++i )
+  {
+    if ( i == slotNr )
+    {
+      if ( slotDescs[i * 32] == -1 )
+      {
+        printf( "%d: (Empty)\r\n", i + 1 );
+      }
+      else
+      {
+        printf( "%d: %.*s\r\n", i + 1, 32, slotDescs + i * 32 );
+      }
+    }
+  }
+}
+
+void tosster_switch( uint16_t slotNr )
+{
+  tosster_put( ( uint8_t )0x13 );
+  tosster_put( slotNr & 0xff );
+  tosster_waitAck();
 }

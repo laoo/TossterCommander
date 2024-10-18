@@ -90,10 +90,21 @@ add_executable( CoreFlasher
   platform/st/core_image.s
 )
 
+add_executable( TosSwtch
+  ${STARTUP_FILE}
+  TosSwitcher.cpp
+  ${COMMON_FILES}
+  ${PLATFORM_FILES}
+)
+
 if ( ${TARGET_PLATFORM} STREQUAL "ST" )
 
 add_custom_command( TARGET TosFlasher POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:TosFlasher> d:\\home\\hatari\\out\\HD
+)
+
+add_custom_command( TARGET TosSwtch POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:TosSwtch> d:\\home\\hatari\\out\\HD
 )
 
 add_custom_command( TARGET CoreFlasher POST_BUILD
