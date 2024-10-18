@@ -18,12 +18,12 @@ extern "C"
   static void tosster_waitAck()
   {
     uint16_t value1 = tosster_get();
-    for ( ;; )
+    for ( uint8_t cnt = 0; cnt != 2; )
     {
       uint16_t value2 = tosster_get();
-      if ( value1 != value2 )
+      if ( value1 == 0x5aa5 && value2 == 0xa55a || value1 == 0xa55a && value2 == 0x5aa5 )
       {
-        break;
+        cnt += 1;
       }
       else
       {
@@ -109,8 +109,6 @@ extern "C"
   {
     static constexpr uint16_t RETRY_COUNT = 20;
 
-    tosster_setReadAddress( dst );
-    tosster_setWriteAddress( dst );
     uint16_t retry;
     for ( retry = 0; retry < RETRY_COUNT; ++retry )
     {
@@ -122,8 +120,11 @@ extern "C"
     {
       for ( retry = 0; retry < RETRY_COUNT; ++retry )
       {
+        tosster_setWriteAddress( dst );
         tosster_erase( PAGE_COUNT );
+        tosster_setWriteAddress( dst );
         tosster_flash( PAGE_COUNT );
+        tosster_setReadAddress( dst );
         tosster_read();
 
         if ( tosster_verifyBlock( '!', data32 ) )
@@ -171,11 +172,12 @@ extern "C"
     printf( "Done\r\n" );
   }
 
-  static void tosster_flashPage( uint8_t const* data )
-
+  static void tosster_flashPage( uint32_t dst, uint8_t const* data )
   {
     tosster_writeData( 1, data );
+    tosster_setWriteAddress( dst );
     tosster_erase( 1 );
+    tosster_setWriteAddress( dst );
     tosster_flash( 1 );
   }
 
@@ -215,9 +217,8 @@ void tosster_udateDescSlot( uint32_t descOff, uint16_t slot, char * tos_version 
   if ( descOff < 512 * 256 )
   {
     uint32_t dst = 0x0D0000 + descOff;
-    tosster_setWriteAddress( dst );
     memset( pageBuffer, 0, 256 );
-    tosster_flashPage( ( uint8_t const* )pageBuffer );
+    tosster_flashPage( dst, ( uint8_t const* )pageBuffer );
 
     descOff += 256;
   }
@@ -239,8 +240,7 @@ void tosster_udateDescSlot( uint32_t descOff, uint16_t slot, char * tos_version 
   }
 
   uint32_t dst = 0x0D0000 + descOff;
-  tosster_setWriteAddress( dst );
-  tosster_flashPage( (uint8_t const*)slotDescs );
+  tosster_flashPage( dst, (uint8_t const*)slotDescs );
   printf( "Done\r\n" );
 }
 
