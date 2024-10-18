@@ -14,7 +14,7 @@ int main()
   if ( tosster_open() )
   {
     auto sv = tosster_readCoreVersion();
-    printf("Actual core version:\r\n%.*s\r\n", ( int )sv.size(), sv.data() );
+    printf("Actual core version: %.*s\r\n", ( int )sv.size(), sv.data() );
     printf("Press \"y\" to proceed flashing\r\n" );
     char c = _getch();
     if ( c != 'y' )

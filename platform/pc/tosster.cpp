@@ -25,6 +25,8 @@ enum State
   FLASH_WRITE0,
   FLASH_ERASE0,
   SELECT_SLOT0,
+  VERSION_READ0,
+  VERSION_READ1,
   WAIT_FOR_ACK
 };
 
@@ -32,6 +34,8 @@ static constexpr uint8_t CMD_READ_ADDR = 0x52;
 static constexpr uint8_t CMD_WRITE_ADDR = 0x57;
 static constexpr uint8_t CMD_BUFFER_WRITE = 0x66;
 static constexpr uint8_t CMD_BUFFER_READ = 0x26;  //DOC IS WRONG
+static constexpr uint8_t CMD_VERSION_READ1 = 0x56;
+static constexpr uint8_t CMD_VERSION_READ2 = 0x76;
 static constexpr uint8_t CMD_FLASH_WRITE = 0x21;
 static constexpr uint8_t CMD_FLASH_READ = 0x24;
 static constexpr uint8_t CMD_FLASH_ERASE = 0x5e;
@@ -118,6 +122,7 @@ static void updateRom( uint8_t* rom )
 static uint16_t read( uint8_t addr )
 {
   static constexpr std::array<uint16_t, 2> idle = { 0xa55a, 0x5aa5 };
+  static constexpr std::array<char, 8> version = { '1', '.', '2', 'f', ' ', ' ', ' ', ' ' };
   static uint32_t accesIdx = 0;
 
   switch ( gState )
@@ -131,6 +136,17 @@ static uint16_t read( uint8_t addr )
     if ( gBufferIndex + 1 >= gBufferLimit )
       gState = IDLE;
     return gBuffer[gBufferIndex++];
+  case VERSION_READ0:
+    accesIdx = 0;
+    gState = VERSION_READ1;
+    [[fallthrough]];
+  case VERSION_READ1:
+    if ( accesIdx >= version.size() )
+    {
+      gState = IDLE;
+      break;
+    }
+    return version[accesIdx++];
   default:
     break;
   }
@@ -211,6 +227,11 @@ static void write( uint8_t data )
       break;
     case CMD_BUFFER_READ:
       gState = BUFFER_READ0;
+      break;
+    case CMD_VERSION_READ1:
+      [[fallthrough]];
+    case CMD_VERSION_READ2:
+      gState = VERSION_READ0;
       break;
     case CMD_FLASH_WRITE:
       gState = FLASH_WRITE0;

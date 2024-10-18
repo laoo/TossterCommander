@@ -80,6 +80,15 @@ extern "C"
     }
   }
 
+  static void tosster_readVersion( uint8_t* data )
+  {
+    tosster_put( ( uint8_t )0x56 );
+    for ( uint16_t i = 0; i < 8; ++i )
+    {
+      data[i] = tosster_get();
+    }
+  }
+
   static void tosster_writeData( uint8_t pageCount, uint8_t const* data )
   {
     tosster_put( ( uint8_t )0x66 );
@@ -185,10 +194,8 @@ extern "C"
 
 std::string_view tosster_readCoreVersion()
 {
-  tosster_setReadAddress( 0 );
-  tosster_read();
-  tosster_readData( 1, ( uint8_t* )pageBuffer );
-  return std::string_view{ ( char const* )pageBuffer, 32 };
+  tosster_readVersion( ( uint8_t* )pageBuffer );
+  return std::string_view{ ( char const* )pageBuffer, 8 };
 }
 
 #ifndef _MSC_VER

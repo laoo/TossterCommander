@@ -8,7 +8,7 @@ int main()
   if ( tosster_open() )
   {
     auto sv = tosster_readCoreVersion();
-    printf( "TOSSTEr core version:\r\n%.*s\r\n", ( int )sv.size(), sv.data() );
+    printf( "TOSSTEr core version: %.*s\r\n", ( int )sv.size(), sv.data() );
     printf( "Select TOS slot to flash\r\nor any other key to exit\r\n" );
     uint32_t descSlot = tosster_printSlots();
     char c = _getch();
