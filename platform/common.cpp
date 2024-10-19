@@ -150,6 +150,7 @@ extern "C"
       return 2;
     }
 
+    printf( "OK\r\n" );
     return 0;
   }
 

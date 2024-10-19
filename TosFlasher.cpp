@@ -29,7 +29,7 @@ static void verify()
 
 int main()
 {
-  printf( "TOSSTEr TOS flasher\r\nversion 1.2 by laoo/ng 2024\r\nTOS to flash:\r\n%.*s\r\n", 32, tos_version );
+  printf( "TOSSTEr TOS flasher version 1.1\r\nMatGuru & laoo/ng 2024\r\nTOS to flash: %.*s\r\n", 32, tos_version );
   tosster_init();
   if ( tosster_open() )
   {
@@ -45,6 +45,7 @@ int main()
     if ( c < '0' || c > '4' )
     {
       printf( "Aborted\r\n" );
+      return 0;
     }
     else
     {

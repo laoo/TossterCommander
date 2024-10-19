@@ -48,12 +48,17 @@ int main( int argc, char** argv )
 {
   if ( argc != 3 )
   {
-    std::cout << "TOSSTEr TOS Flasher Maker v1.2 by laoo/ng 2024\n";
+    std::cout << "TOSSTEr TOS Flasher Maker v1.1 by laoo/ng 2024\n";
     std::cout << "Usage:\nTossToser TOS_image_file output_flasher_file\n\nUse descriptive TOS file name as at most 32 characters from file name will be used as tos version string.\n(spaces are allowed)\n";
     return 1;
   }
 
   std::filesystem::path tosPath{ argv[1] };
+  if ( !std::filesystem::exists( tosPath ) )
+  {
+    std::cout << "TOS file not found\n";
+    return 1;
+  }
   std::filesystem::path flasherPath{ argv[2] };
 
   std::vector<uint8_t> templateData = getTemplate();
@@ -61,11 +66,6 @@ int main( int argc, char** argv )
   std::span<char,32> versionSpan = std::span<char,32>( (char*)imageSpan.data() + imageSpan.size(), 32 );
 
   size_t tosSize = std::filesystem::file_size( tosPath );
-  if ( tosSize == 0 )
-  {
-    std::cout << "Tos file not found\n";
-    return 1;
-  }
 
   if ( tosSize != imageSpan.size() )
   {
