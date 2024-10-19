@@ -175,7 +175,7 @@ extern "C"
     {
       uint32_t i5 = i * 32768;
       uint32_t dst = 0x100000 + slot * 0x40000 + i5;
-      printf( "Verifying ... %d/8", i + 1 );
+      printf( "Verifying ... %d/8 ", i + 1 );
 
       tosster_setReadAddress( dst );
       tosster_read();
@@ -183,7 +183,7 @@ extern "C"
       tosster_readData( PAGE_COUNT, buf );
       for ( uint16_t j = 0; j < PAGE_COUNT * 256; ++j )
       {
-        if ( buf[j] != data[j] )
+        if ( buf[j] != data[i5 + j] )
         {
           j &= 0xfff0;
           printf( "\r\nOffset: $%04x\r\nExpected:\r\n$", i5 + j );
@@ -200,8 +200,8 @@ extern "C"
           return;
         }
       }
+      printf( "OK\r\n" );
     }
-    printf( "OK\r\n" );
   }
 
   void tosster_flash_core( uint8_t const* data )
