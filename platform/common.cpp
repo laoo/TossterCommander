@@ -235,10 +235,10 @@ extern "C"
 
 }
 
-std::string_view tosster_readCoreVersion()
+std::pair<std::string_view, uint8_t> tosster_readCoreVersion()
 {
   tosster_readVersion( ( uint8_t* )pageBuffer );
-  return std::string_view{ ( char const* )pageBuffer, 8 };
+  return { std::string_view{ ( char const* )pageBuffer, 7 }, ( ( uint8_t* )pageBuffer )[7] };
 }
 
 #ifndef _MSC_VER

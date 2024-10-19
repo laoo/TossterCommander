@@ -22,7 +22,7 @@ void tosster_flash_core( uint8_t const* data );
 
 }
 
-std::string_view tosster_readCoreVersion();
+std::pair<std::string_view, uint8_t> tosster_readCoreVersion();
 uint32_t tosster_printSlots( uint8_t actualSlot );
 void tosster_printSlot( uint16_t slotNr );
 void tosster_switch( uint16_t slotNr );

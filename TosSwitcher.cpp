@@ -8,7 +8,7 @@ int main()
   if ( tosster_open() )
   {
     auto sv = tosster_readCoreVersion();
-    printf( "TOSSTEr core version: %.*s\r\n", ( int )sv.size(), sv.data() );
+    printf( "TOSSTEr core version: %.*s\r\n", ( int )sv.first.size(), sv.first.data() );
     auto actualSlot = tosster_actualSlot();
     printf( "Switch count: %d\r\n", (uint32_t)actualSlot.first );
     printf( "Select TOS slot to switch to\r\nor any other key to exit\r\n" );

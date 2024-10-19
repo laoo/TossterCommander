@@ -34,7 +34,7 @@ int main()
   if ( tosster_open() )
   {
     auto sv = tosster_readCoreVersion();
-    printf( "Core version: %.*s\r\n", ( int )sv.size(), sv.data() );
+    printf( "Core version: %.*s\r\n", ( int )sv.first.size(), sv.first.data() );
     auto actualSlot = tosster_actualSlot();
     printf( "Select destination TOS slot:\r\n\r\n" );
     uint32_t descSlot = tosster_printSlots( actualSlot.second & 3 );

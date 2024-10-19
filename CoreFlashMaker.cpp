@@ -48,10 +48,10 @@ std::span<uint8_t> findImage( std::span<uint8_t> tpl )
 
 int main( int argc, char** argv )
 {
-  if ( argc != 3 )
+  if ( argc != 4 )
   {
     std::cout << "TOSSTEr Core Flasher Maker v1.1 by laoo/ng 2024\n";
-    std::cout << "Usage:\nTossCorer core_hex_file output_flasher_file\n\nUse descriptive core hex file name as at most 32 characters from file name will be used as core version string.\n(spaces are allowed)\n";
+    std::cout << "Usage:\nTossCorer core_hex_file output_flasher_file core_type_decimal_number\n\nUse descriptive core hex file name as at most 32 characters from file name will be used as core version string.\n(spaces are allowed)\n";
     return 1;
   }
 
@@ -64,11 +64,17 @@ int main( int argc, char** argv )
 
   std::filesystem::path flasherPath{ argv[2] };
 
+  int coreType = atoi( argv[3] );
+  if ( coreType < 1 || coreType > 255 )
+  {
+    std::cout << "third parameter must be a decimal number in the range 1..255\n";
+    return 0;
+  }
+
   std::vector<uint8_t> templateData = getTemplate();
   auto imageSpan = findImage( templateData );
 
   std::ranges::fill( imageSpan, 0xff );
-
 
   std::ifstream coreFile{ corePath };
 
@@ -106,6 +112,8 @@ int main( int argc, char** argv )
 
   std::fill_n( imageSpan.begin(), 256, 0 );
   std::copy_n( versionString.begin(), (std::min)( versionString.size(), 32ull ), imageSpan.begin() );
+  //core type is encoded at index 32 of image
+  imageSpan[32] = (uint8_t)coreType;
 
   std::ofstream outFile{ flasherPath, std::ios::binary };
   if ( outFile.good() )
